@@ -10,7 +10,8 @@ const formSearch = document.querySelector(".form-search"),
 const CITY_API = "cities.json",
 	PROXY = "https://cors-anywhere.herokuapp.com/",
 	API_KEY = "a9019235c3eb270f82f7d50ecf60329c",
-	calendar = "http://min-prices.aviasales.ru/calendar_preload";
+  calendar = "http://min-prices.aviasales.ru/calendar_preload",
+  MAX_COUNT = 10;
 
 let city = [];
 
@@ -58,11 +59,13 @@ const toggleInputValue = (event, dropdown, input) => {
 	}
 };
 
+// Формируем название города по его коду
 const getNameCity = code => {
 	const objCity = city.find(item => item.code === code);
 	return objCity.name;
 };
 
+// Кол-во пересадок
 const getChanges = num => {
 	if (num) {
 		return num === 1 ? "С одной пересадкой" : `Пересадок: ${num}`;
@@ -71,6 +74,7 @@ const getChanges = num => {
 	}
 };
 
+// Формируем дату отправления в формате '00 месяц 2020 г., 00:00'
 const getDate = date => {
   return new Date(date).toLocaleString('ru', {
     year: 'numeric',
@@ -81,8 +85,27 @@ const getDate = date => {
   });
 };
 
+// Формируем ссылку
+const getLink = (data) => {
+  let link = 'https://www.aviasales.ru/search/';
+  link += data.origin;
+
+  const date = new Date(data.depart_date);
+
+  // Формируем день. Если он в формате 5, то добавляем ноль в начало
+  const day = date.getDate();
+  link += day < 10 ? '0' + day : day;
+
+  const month = date.getMonth() + 1;
+  link += month < 10 ? '0' + month : month;
+  
+  link += data.destination + '1';
+  return link;
+}
+
+// Создаем карточку билета
 const createCard = data => {
-	const ticket = document.createElement("article");
+	const ticket = document.createElement("article"); // Создаем родителя для карточек билета
 	ticket.classList.add("ticket");
 
 	let deep = "";
@@ -92,7 +115,7 @@ const createCard = data => {
     <h3 class="agent">${data.gate}</h3>
 	  <div class="ticket__wrapper">
 	  	<div class="left-side">
-	  		<a href="" class="button button__buy">Купить за ${data.value} Р.</a>
+	  		<a href="${getLink(data)}" class="button button__buy" target="_blank">Купить за ${data.value} Р.</a>
 	  	</div>
 	  	<div class="right-side">
 	  		<div class="block-left">
@@ -120,6 +143,7 @@ const createCard = data => {
 	return ticket;
 };
 
+// Показываем секцию с заголовком и добавляем в него карточку билета
 const renderCheapDay = cheapTicket => {
   cheapestTicket.style.display = 'block';
   cheapestTicket.innerHTML = '<h2>Самый дешевый билет на выбранную дату</h2>';
@@ -128,6 +152,7 @@ const renderCheapDay = cheapTicket => {
 	cheapestTicket.append(ticket);
 };
 
+// Показываем секцию с заголовком и добавляем в него карточки билетов
 const renderCheapYear = cheapTickets => {
   otherCheapTickets.style.display = 'block';
   otherCheapTickets.innerHTML = '<h2>Самые дешевые билеты на другие даты</h2>';
@@ -142,9 +167,14 @@ const renderCheapYear = cheapTickets => {
 	//     return -1;
 	//   }
 	//   return 0;
-	// })	
+  // })
+  for (let i = 0; i < cheapTickets.length && i < MAX_COUNT; i++) {
+    const ticket = createCard(cheapTickets[i]);
+    otherCheapTickets.append(ticket);
+  }  
 };
 
+// Получаем билеты по дате и остальные
 const renderCheap = (data, date) => {
 	const cheapTickets = JSON.parse(data).best_prices;
 
